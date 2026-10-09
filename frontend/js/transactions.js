@@ -3,6 +3,7 @@ import { state, setState } from './state.js';
 import { toast, confirmDialog } from './ui.js';
 import { formatIDR, escapeHTML, todayISO } from './formatters.js';
 import { validateTransactionInput } from './validation.js';
+import { getMoneyValue, attachMoneyInput } from './money-input.js';
 
 export function renderTransactionTable() {
   const wrap = document.getElementById('transaction-table-container');
@@ -109,7 +110,7 @@ export function wireTransactionForm() {
     const fd = new FormData(form);
     const kind = fd.get('kind');
     const description = String(fd.get('description') || '').trim();
-    const amount = Number(fd.get('amount'));
+    const amount = getMoneyValue(document.getElementById('tx-amount'));
     const date = String(fd.get('date') || '');
     const category_id = String(fd.get('category_id') || '');
     const notes = String(fd.get('notes') || '').trim();
@@ -154,6 +155,7 @@ export function wireTransactionForm() {
     if (action === 'edit') { openTransactionDialog(tx); return; }
     if (action === 'complete') { await completeFlow(tx); return; }
   });
+  attachMoneyInput(document.getElementById('tx-amount'));
 
   wireTransactionDialog();
 }
@@ -189,7 +191,8 @@ function openTransactionDialog(tx) {
       : 'Edit expense';
 
   document.getElementById('edit-description').value = tx.description;
-  document.getElementById('edit-amount').value = tx.amount;
+  const editAmountEl = document.getElementById('edit-amount');
+attachMoneyInput(editAmountEl).setValue(tx.amount);
 
   const dateLabel = document.getElementById('edit-date-label-text');
   const dateEl = document.getElementById('edit-date');
@@ -227,7 +230,7 @@ function wireTransactionDialog() {
     if (!tx) { dlg.close(); return; }
 
     const description = document.getElementById('edit-description').value.trim();
-    const amount = Number(document.getElementById('edit-amount').value);
+    const amount = getMoneyValue(document.getElementById('edit-amount'));
     const dateVal = document.getElementById('edit-date').value;
     const category_id = document.getElementById('edit-category').value || '';
     const notes = document.getElementById('edit-notes').value.trim();

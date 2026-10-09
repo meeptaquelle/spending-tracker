@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Daily Spending Tracker</title>
+<title>Finance Dashboard</title>
 <link rel="stylesheet" href="css/styles.css" />
 <link rel="stylesheet" href="css/layout.css" />
 <link rel="stylesheet" href="css/components.css" />
 </head>
 <body>
 <header class="app-header">
-  <div class="brand">Daily Spending Tracker</div>
+  <div class="brand">Finance Dashboard</div>
   <div class="month-nav">
     <button id="prev-month" class="btn btn-ghost" type="button" aria-label="Previous month">‹</button>
     <span id="month-label" class="month-label">—</span>
@@ -20,27 +20,20 @@
 </header>
 
 <main>
-  <section aria-label="Category budgets" class="category-section">
-    <div class="section-head">
-      <h2 class="section-title">Categories</h2>
-    </div>
-    <div id="category-cards" class="category-scroll"></div>
-  </section>
-
   <div class="layout">
     <aside class="col-left">
-      <section aria-label="Monthly summary">
+      <section aria-label="Monthly summary" data-collapsible="summary">
         <h2 class="section-title">Summary</h2>
         <div id="summary-cards" class="summary-stack"></div>
       </section>
 
-      <section aria-label="Add transaction">
+      <section aria-label="Add transaction" data-collapsible="form">
         <h2 class="section-title">Add transaction</h2>
         <form id="transaction-form" class="form-stack" autocomplete="off">
           <label>Type
             <select name="kind" id="tx-kind">
+              <option value="expense" selected>Expense</option>
               <option value="income">Income</option>
-              <option value="expense">Expense</option>
               <option value="planned">Planned expense</option>
             </select>
           </label>
@@ -48,7 +41,7 @@
             <input name="description" id="tx-description" required maxlength="200" />
           </label>
           <label>Amount (IDR)
-            <input name="amount" id="tx-amount" type="number" inputmode="numeric" min="1" step="1" required />
+            <input name="amount" id="tx-amount" type="text" inputmode="numeric" data-money class="money-expense" required />
           </label>
           <label>Date
             <input name="date" id="tx-date" type="date" required />
@@ -68,6 +61,13 @@
     </aside>
 
     <section class="col-right" aria-label="Transactions">
+      <section aria-label="Category budgets" class="category-section" data-collapsible="category">
+        <div class="section-head">
+          <h2 class="section-title">Categories</h2>
+        </div>
+        <div id="category-cards" class="category-scroll"></div>
+      </section>
+
       <div class="table-header">
         <h2 class="section-title">Transactions</h2>
         <div class="filters">
@@ -90,6 +90,40 @@
         <button id="export-json" class="btn" type="button">Backup JSON</button>
       </div>
     </section>
+
+    <aside class="col-stats">
+      <section aria-label="Reminders" data-collapsible="reminders">
+        <div class="section-head">
+          <h2 class="section-title">Reminders</h2>
+          <button id="add-reminder" class="btn btn-ghost btn-icon" type="button" aria-label="Add reminder" title="Add reminder">+</button>
+        </div>
+        <div id="reminders-list" class="reminders-list"></div>
+      </section>
+
+      <section aria-label="Spending trend" data-collapsible="graph">
+        <h2 class="section-title">Spending trend</h2>
+        <div class="stat-tabs" id="span-tabs">
+          <button class="stat-tab active" data-span="1">1M</button>
+          <button class="stat-tab" data-span="3">3M</button>
+          <button class="stat-tab" data-span="6">6M</button>
+          <button class="stat-tab" data-span="12">12M</button>
+        </div>
+        <div class="stat-chart-wrap">
+          <canvas id="spending-chart" width="600" height="220"></canvas>
+        </div>
+        <div id="spending-chart-legend" class="stat-legend"></div>
+      </section>
+
+      <section aria-label="Lifetime totals" data-collapsible="lifetime">
+        <h2 class="section-title">Lifetime</h2>
+        <div id="lifetime-totals" class="lifetime-grid"></div>
+      </section>
+
+      <section aria-label="Quick stats" data-collapsible="quickstats">
+        <h2 class="section-title">This month</h2>
+        <div id="quick-stats" class="quick-stats"></div>
+      </section>
+    </aside>
   </div>
 </main>
 
@@ -116,10 +150,10 @@
       <select name="icon" id="cat-icon"></select>
     </label>
     <label>Monthly budget (IDR, blank for none)
-      <input name="monthly_budget" id="cat-monthly" type="number" inputmode="numeric" min="1" step="1" />
+      <input name="monthly_budget" id="cat-monthly" type="text" inputmode="numeric" data-money />
     </label>
     <label>Daily budget (IDR, blank for none)
-      <input name="daily_budget" id="cat-daily" type="number" inputmode="numeric" min="1" step="1" />
+      <input name="daily_budget" id="cat-daily" type="text" inputmode="numeric" data-money />
     </label>
     <div class="dialog-actions">
       <button id="cat-archive" type="button" class="btn btn-danger" hidden>Archive</button>
@@ -137,7 +171,7 @@
       <input name="description" id="edit-description" required maxlength="200" autocomplete="off" />
     </label>
     <label>Amount (IDR)
-      <input name="amount" id="edit-amount" type="number" inputmode="numeric" min="1" step="1" required />
+      <input name="amount" id="edit-amount" type="text" inputmode="numeric" data-money required />
     </label>
     <label><span id="edit-date-label-text">Date</span>
       <input name="date" id="edit-date" type="date" required />
@@ -150,6 +184,30 @@
     </label>
     <div class="dialog-actions">
       <button id="edit-delete" type="button" class="btn btn-danger">Delete</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn">Cancel</button>
+      <button value="save" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="reminder-dialog" class="dialog">
+  <form method="dialog" id="reminder-form">
+    <h3 id="reminder-dialog-title">New reminder</h3>
+    <label>Label
+      <input name="label" id="reminder-label" required maxlength="80" autocomplete="off" />
+    </label>
+    <label>Amount (IDR, optional)
+      <input name="amount" id="reminder-amount" type="text" inputmode="numeric" data-money />
+    </label>
+    <label>Due date (optional)
+      <input name="due" id="reminder-due" type="date" />
+    </label>
+    <label>Notes (optional)
+      <input name="notes" id="reminder-notes" maxlength="200" />
+    </label>
+    <div class="dialog-actions">
+      <button id="reminder-delete" type="button" class="btn btn-danger" hidden>Delete</button>
       <span class="spacer"></span>
       <button value="cancel" class="btn">Cancel</button>
       <button value="save" class="btn btn-primary">Save</button>

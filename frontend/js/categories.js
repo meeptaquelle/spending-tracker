@@ -4,6 +4,7 @@ import { toast, confirmDialog } from './ui.js';
 import { formatIDR, escapeHTML, todayISO } from './formatters.js';
 import { categoryActual, categoryPlanned, categoryDailyActual, budgetProgress } from './calculations.js';
 import { validateCategoryInput } from './validation.js';
+import { attachMoneyInput, getMoneyValue } from './money-input.js';
 
 const ICONS = ['🍔', '🚌', '🏠', '💊', '🎬', '🛒', '💡', '📚', '🎁', '✈️', '💼', '🧾', '☕', '🍜', '⛽', '📱'];
 
@@ -75,7 +76,6 @@ export function wireCategoryCards() {
     }
   });
 
-  // Keyboard activation for the add card (it's role=button tabindex=0)
   container.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const card = e.target.closest('.add-card');
@@ -104,14 +104,19 @@ function openCategoryDialog(cat) {
   const dailyEl = document.getElementById('cat-daily');
   const archiveBtn = document.getElementById('cat-archive');
 
+  // Attach the money formatter once per element. attachMoneyInput returns a
+  // controller with setValue() that handles both number and empty string.
+  const monthlyCtl = attachMoneyInput(monthlyEl);
+  const dailyCtl = attachMoneyInput(dailyEl);
+
   if (cat) {
     dialogMode = 'edit';
     dialogCategoryId = cat.id;
     title.textContent = 'Edit category';
     nameEl.value = cat.name;
     populateIconSelect(cat.icon);
-    monthlyEl.value = cat.monthly_budget ?? '';
-    dailyEl.value = cat.daily_budget ?? '';
+    monthlyCtl.setValue(cat.monthly_budget);
+    dailyCtl.setValue(cat.daily_budget);
     archiveBtn.hidden = false;
   } else {
     dialogMode = 'create';
@@ -119,8 +124,8 @@ function openCategoryDialog(cat) {
     title.textContent = 'New category';
     nameEl.value = '';
     populateIconSelect(null);
-    monthlyEl.value = '';
-    dailyEl.value = '';
+    monthlyCtl.setValue('');
+    dailyCtl.setValue('');
     archiveBtn.hidden = true;
   }
 
@@ -134,18 +139,16 @@ function wireCategoryDialog() {
   const archiveBtn = document.getElementById('cat-archive');
 
   form.addEventListener('submit', async (e) => {
-    // 'save' is the submitter; check e.submitter value
-    if (e.submitter && e.submitter.value === 'cancel') return; // let dialog close
-
+    if (e.submitter && e.submitter.value === 'cancel') return;
     e.preventDefault();
 
     const name = document.getElementById('cat-name').value.trim();
     const icon = document.getElementById('cat-icon').value;
-    const monthlyRaw = document.getElementById('cat-monthly').value.trim();
-    const dailyRaw = document.getElementById('cat-daily').value.trim();
 
-    const monthly_budget = monthlyRaw === '' ? null : Number(monthlyRaw);
-    const daily_budget = dailyRaw === '' ? null : Number(dailyRaw);
+    const monthlyEl = document.getElementById('cat-monthly');
+    const dailyEl = document.getElementById('cat-daily');
+    const monthly_budget = monthlyEl.value.trim() === '' ? null : getMoneyValue(monthlyEl);
+    const daily_budget = dailyEl.value.trim() === '' ? null : getMoneyValue(dailyEl);
 
     const errors = validateCategoryInput({ name, monthly_budget, daily_budget });
     if (Object.keys(errors).length) {

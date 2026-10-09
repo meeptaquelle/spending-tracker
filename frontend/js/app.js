@@ -8,6 +8,10 @@ import { renderSummary } from './dashboard.js';
 import { renderTransactionTable, wireTransactionForm } from './transactions.js';
 import { renderCategoryCards, wireCategoryCards, renderCategoryOptions } from './categories.js';
 import { toast, setLoading, setError } from './ui.js';
+import {
+  loadReminders, wireReminders, wireStatsTabs, renderStatsColumn,
+} from './stats.js';
+import { wireCollapsibles } from './collapse.js';
 
 let appBooted = false;
 
@@ -63,18 +67,23 @@ async function boot() {
   wireFilters();
   wireExports();
   wireLogout();
+  wireStatsTabs();
+  wireReminders();
 
   subscribe(onStateChange);
+wireCollapsibles();
 
+  await loadReminders();
   await refreshAll();
+  
 }
-
 function onStateChange() {
   document.getElementById('month-label').textContent = formatMonth(state.selectedMonth);
   renderSummary(state);
   renderCategoryCards();
   renderCategoryOptions();
   renderTransactionTable();
+  renderStatsColumn(); 
 }
 
 async function refreshAll() {
