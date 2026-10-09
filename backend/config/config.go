@@ -14,6 +14,10 @@ type Config struct {
 	CredentialsPath string
 	AllowedOrigins  []string
 	RequestTimeout  time.Duration
+
+	AuthPassword string
+	AuthSecret   string
+	AuthTTL      time.Duration
 }
 
 func Load() (*Config, error) {
@@ -23,12 +27,20 @@ func Load() (*Config, error) {
 		Port:            getEnv("PORT", "8080"),
 		SpreadsheetID:   os.Getenv("SPREADSHEET_ID"),
 		CredentialsPath: getEnv("GOOGLE_APPLICATION_CREDENTIALS", "./service-account.json"),
+		AuthPassword:    os.Getenv("AUTH_PASSWORD"),
+		AuthSecret:      os.Getenv("AUTH_SECRET"),
 	}
 	if cfg.SpreadsheetID == "" {
 		return nil, fmt.Errorf("SPREADSHEET_ID is required")
 	}
+	if cfg.AuthPassword == "" {
+		return nil, fmt.Errorf("AUTH_PASSWORD is required")
+	}
+	if len(cfg.AuthSecret) < 16 {
+		return nil, fmt.Errorf("AUTH_SECRET must be at least 16 chars (32+ recommended)")
+	}
 
-	for _, o := range strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:5500"), ",") {
+	for _, o := range strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3000"), ",") {
 		o = strings.TrimSpace(o)
 		if o != "" {
 			cfg.AllowedOrigins = append(cfg.AllowedOrigins, o)
@@ -40,6 +52,13 @@ func Load() (*Config, error) {
 		sec = 15
 	}
 	cfg.RequestTimeout = time.Duration(sec) * time.Second
+
+	ttlHours, err := strconv.Atoi(getEnv("AUTH_TTL_HOURS", "720"))
+	if err != nil || ttlHours <= 0 {
+		ttlHours = 720
+	}
+	cfg.AuthTTL = time.Duration(ttlHours) * time.Hour
+
 	return cfg, nil
 }
 
@@ -50,7 +69,6 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// loadDotEnv parses a minimal .env file. Existing env vars take precedence.
 func loadDotEnv(path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {

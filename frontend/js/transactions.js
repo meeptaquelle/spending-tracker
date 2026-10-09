@@ -1,9 +1,7 @@
 import { api } from './api.js';
 import { state, setState } from './state.js';
 import { toast, confirmDialog } from './ui.js';
-import {
-  formatIDR, formatSignedIDR, escapeHTML, todayISO,
-} from './formatters.js';
+import { formatIDR, escapeHTML, todayISO } from './formatters.js';
 import { validateTransactionInput } from './validation.js';
 
 export function renderTransactionTable() {
@@ -41,7 +39,7 @@ export function renderTransactionTable() {
           <th>Type</th>
           <th>Category</th>
           <th class="num">Amount</th>
-          <th>Actions</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -55,6 +53,7 @@ function rowHTML(t, catById) {
   const isPlanned = t.status === 'planned';
   const date = isPlanned ? t.planned_date : t.date;
   const cat = t.category_id ? (catById[t.category_id]?.name || '') : '';
+  const idEsc = escapeHTML(t.id);
 
   let typeLabel, amountHTML, statusClass;
   if (t.type === 'income') {
@@ -72,7 +71,8 @@ function rowHTML(t, catById) {
   }
 
   const completeBtn = isPlanned
-    ? `<button class="btn btn-ghost" data-action="complete" data-id="${escapeHTML(t.id)}" title="Mark as completed">☐</button>`
+    ? `<button class="btn btn-ghost btn-icon" data-action="complete" data-id="${idEsc}"
+             aria-label="Mark ${escapeHTML(t.description)} as completed" title="Mark as completed">☐</button>`
     : '';
 
   return `
@@ -85,8 +85,8 @@ function rowHTML(t, catById) {
       <td>
         <div class="row-actions">
           ${completeBtn}
-          <button class="btn btn-ghost" data-action="edit" data-id="${escapeHTML(t.id)}">Edit</button>
-          <button class="btn btn-ghost btn-danger" data-action="delete" data-id="${escapeHTML(t.id)}">Delete</button>
+          <button class="btn btn-ghost btn-icon" data-action="edit" data-id="${idEsc}"
+                  aria-label="Edit transaction" title="Edit">✎</button>
         </div>
       </td>
     </tr>
@@ -151,29 +151,11 @@ export function wireTransactionForm() {
     const tx = state.transactions.find(t => t.id === id);
     if (!tx) return;
 
-    if (action === 'delete') {
-      const ok = await confirmDialog('Delete transaction', `Delete "${tx.description}"?`);
-      if (!ok) return;
-      try {
-        await api.deleteTransaction(id);
-        setState({ transactions: state.transactions.filter(t => t.id !== id) });
-        toast('Deleted', 'success');
-      } catch (err) {
-        toast(err.message, 'error');
-      }
-      return;
-    }
-
-    if (action === 'complete') {
-      await completeFlow(tx);
-      return;
-    }
-
-    if (action === 'edit') {
-      await editFlow(tx);
-      return;
-    }
+    if (action === 'edit') { openTransactionDialog(tx); return; }
+    if (action === 'complete') { await completeFlow(tx); return; }
   });
+
+  wireTransactionDialog();
 }
 
 async function completeFlow(tx) {
@@ -193,23 +175,109 @@ async function completeFlow(tx) {
   }
 }
 
-async function editFlow(tx) {
-  const description = prompt('Description:', tx.description);
-  if (description == null) return;
-  const amountStr = prompt('Amount:', String(tx.amount));
-  if (amountStr == null) return;
-  const dateVal = prompt('Effective date (YYYY-MM-DD):', tx.status === 'planned' ? tx.planned_date : tx.date);
-  if (dateVal == null) return;
+// ---------- Edit / delete modal ----------
 
-  const payload = { ...tx, description, amount: Number(amountStr) };
-  if (tx.status === 'planned') payload.planned_date = dateVal;
-  else { payload.date = dateVal; payload.actual_date = dateVal; }
+let editingTxId = null;
 
-  try {
-    const updated = await api.updateTransaction(tx.id, payload);
-    setState({ transactions: state.transactions.map(t => t.id === tx.id ? updated : t) });
-    toast('Updated', 'success');
-  } catch (err) {
-    toast(err.message, 'error');
+function openTransactionDialog(tx) {
+  editingTxId = tx.id;
+  const dlg = document.getElementById('tx-dialog');
+
+  document.getElementById('tx-dialog-title').textContent =
+    tx.type === 'income' ? 'Edit income'
+      : tx.status === 'planned' ? 'Edit planned expense'
+      : 'Edit expense';
+
+  document.getElementById('edit-description').value = tx.description;
+  document.getElementById('edit-amount').value = tx.amount;
+
+  const dateLabel = document.getElementById('edit-date-label-text');
+  const dateEl = document.getElementById('edit-date');
+  if (tx.status === 'planned') {
+    dateLabel.textContent = 'Planned date';
+    dateEl.value = tx.planned_date || tx.date || '';
+  } else {
+    dateLabel.textContent = tx.type === 'income' ? 'Received on' : 'Date';
+    dateEl.value = tx.date || tx.actual_date || '';
   }
+
+  const catSelect = document.getElementById('edit-category');
+  const opts = state.categories
+    .map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}</option>`)
+    .join('');
+  catSelect.innerHTML = `<option value="">—</option>` + opts;
+  catSelect.value = tx.category_id || '';
+
+  document.getElementById('edit-notes').value = tx.notes || '';
+
+  dlg.showModal();
+  setTimeout(() => document.getElementById('edit-description').focus(), 0);
+}
+
+function wireTransactionDialog() {
+  const dlg = document.getElementById('tx-dialog');
+  const form = document.getElementById('tx-edit-form');
+  const deleteBtn = document.getElementById('edit-delete');
+
+  form.addEventListener('submit', async (e) => {
+    if (e.submitter && e.submitter.value === 'cancel') return; // let dialog close
+    e.preventDefault();
+
+    const tx = state.transactions.find(t => t.id === editingTxId);
+    if (!tx) { dlg.close(); return; }
+
+    const description = document.getElementById('edit-description').value.trim();
+    const amount = Number(document.getElementById('edit-amount').value);
+    const dateVal = document.getElementById('edit-date').value;
+    const category_id = document.getElementById('edit-category').value || '';
+    const notes = document.getElementById('edit-notes').value.trim();
+
+    const errors = validateTransactionInput({
+      description,
+      amount,
+      date: dateVal,
+      kind: tx.type === 'income' ? 'income' : (tx.status === 'planned' ? 'planned' : 'expense'),
+    });
+    if (Object.keys(errors).length) {
+      toast(Object.values(errors)[0], 'error');
+      return;
+    }
+
+    const payload = { ...tx, description, amount, category_id, notes };
+    if (tx.status === 'planned') {
+      payload.planned_date = dateVal;
+      // keep date in sync so monthOf() works even if completed later
+      payload.date = dateVal;
+    } else {
+      payload.date = dateVal;
+      payload.actual_date = dateVal;
+    }
+
+    try {
+      const updated = await api.updateTransaction(tx.id, payload);
+      setState({ transactions: state.transactions.map(t => t.id === tx.id ? updated : t) });
+      toast('Updated', 'success');
+      dlg.close('saved');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+
+  deleteBtn.addEventListener('click', async () => {
+    const tx = state.transactions.find(t => t.id === editingTxId);
+    if (!tx) return;
+    const ok = await confirmDialog(
+      'Delete transaction',
+      `Delete "${tx.description}"? This cannot be undone.`
+    );
+    if (!ok) return;
+    try {
+      await api.deleteTransaction(tx.id);
+      setState({ transactions: state.transactions.filter(t => t.id !== tx.id) });
+      toast('Deleted', 'success');
+      dlg.close('deleted');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 }

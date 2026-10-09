@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/meeptaquelle/spending-tracker/backend/config"
 	"github.com/meeptaquelle/spending-tracker/backend/handlers"
 	"github.com/meeptaquelle/spending-tracker/backend/services"
@@ -18,13 +17,9 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not loaded: %v", err)
-	}
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
-
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -35,27 +30,40 @@ func main() {
 		log.Fatalf("storage: %v", err)
 	}
 
+	authSvc := services.NewAuthService(cfg.AuthPassword, cfg.AuthSecret, cfg.AuthTTL)
+	authH := handlers.NewAuthHandler(authSvc)
+
 	txSvc := services.NewTransactionService(store)
 	txH := handlers.NewTransactionHandler(txSvc)
 	catH := handlers.NewCategoryHandler(store)
 	setH := handlers.NewSettingsHandler(store)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", handlers.Health)
-	mux.HandleFunc("GET /api/transactions", txH.List)
-	mux.HandleFunc("GET /api/transactions/{id}", txH.Get)
-	mux.HandleFunc("POST /api/transactions", txH.Create)
-	mux.HandleFunc("PUT /api/transactions/{id}", txH.Update)
-	mux.HandleFunc("DELETE /api/transactions/{id}", txH.Delete)
-	mux.HandleFunc("POST /api/transactions/{id}/complete", txH.Complete)
-	mux.HandleFunc("GET /api/categories", catH.List)
-	mux.HandleFunc("POST /api/categories", catH.Create)
-	mux.HandleFunc("PUT /api/categories/{id}", catH.Update)
-	mux.HandleFunc("POST /api/categories/{id}/archive", catH.Archive)
-	mux.HandleFunc("GET /api/settings", setH.Get)
-	mux.HandleFunc("PUT /api/settings", setH.Put)
+	// --- public routes (no auth) ---
+	public := http.NewServeMux()
 
-	var handler http.Handler = mux
+	// --- protected routes ---
+	protected := http.NewServeMux()
+	protected.HandleFunc("GET /api/transactions", txH.List)
+	protected.HandleFunc("GET /api/transactions/{id}", txH.Get)
+	protected.HandleFunc("POST /api/transactions", txH.Create)
+	protected.HandleFunc("PUT /api/transactions/{id}", txH.Update)
+	protected.HandleFunc("DELETE /api/transactions/{id}", txH.Delete)
+	protected.HandleFunc("POST /api/transactions/{id}/complete", txH.Complete)
+	protected.HandleFunc("GET /api/categories", catH.List)
+	protected.HandleFunc("POST /api/categories", catH.Create)
+	protected.HandleFunc("PUT /api/categories/{id}", catH.Update)
+	protected.HandleFunc("POST /api/categories/{id}/archive", catH.Archive)
+	protected.HandleFunc("GET /api/settings", setH.Get)
+	protected.HandleFunc("PUT /api/settings", setH.Put)
+
+	// combine: try protected first (which enforces auth), fall back to public
+	root := http.NewServeMux()
+	root.HandleFunc("GET /api/health", handlers.Health)
+	root.HandleFunc("POST /api/auth/login", authH.Login)
+	root.Handle("/api/", handlers.RequireAuth(authSvc, protected))
+	root.Handle("/", public)
+
+	var handler http.Handler = root
 	handler = withTimeout(handler, cfg.RequestTimeout)
 	handler = withLogging(handler)
 	handler = withCORS(handler, cfg.AllowedOrigins)
@@ -98,7 +106,8 @@ func withCORS(next http.Handler, allowed []string) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Max-Age", "86400")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

@@ -20,75 +20,81 @@
 </header>
 
 <main>
-  <section id="summary-cards" class="card-grid" aria-label="Monthly summary"></section>
-
-  <section aria-label="Category budgets">
-    <h2 class="section-title">Categories</h2>
+  <section aria-label="Category budgets" class="category-section">
+    <div class="section-head">
+      <h2 class="section-title">Categories</h2>
+    </div>
     <div id="category-cards" class="category-scroll"></div>
   </section>
 
-  <section aria-label="Add transaction">
-    <h2 class="section-title">Add transaction</h2>
-    <form id="transaction-form" class="form-inline" autocomplete="off">
-      <label>Type
-        <select name="kind" id="tx-kind">
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-          <option value="planned">Planned expense</option>
-        </select>
-      </label>
-      <label>Description
-        <input name="description" id="tx-description" required maxlength="200" />
-      </label>
-      <label>Amount (IDR)
-        <input name="amount" id="tx-amount" type="number" inputmode="numeric" min="1" step="1" required />
-      </label>
-      <label>Date
-        <input name="date" id="tx-date" type="date" required />
-      </label>
-      <label>Category
-        <select name="category_id" id="tx-category"><option value="">—</option></select>
-      </label>
-      <label>Notes
-        <input name="notes" id="tx-notes" maxlength="200" />
-      </label>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <button type="reset" class="btn">Cancel</button>
-      </div>
-    </form>
-  </section>
+  <div class="layout">
+    <aside class="col-left">
+      <section aria-label="Monthly summary">
+        <h2 class="section-title">Summary</h2>
+        <div id="summary-cards" class="summary-stack"></div>
+      </section>
 
-  <section aria-label="Transactions">
-    <div class="table-header">
-      <h2 class="section-title">Transactions</h2>
-      <div class="filters">
-        <label>Filter
-          <select id="filter-kind">
-            <option value="all">All</option>
-            <option value="income">Income</option>
-            <option value="expense">Completed expenses</option>
-            <option value="planned">Planned expenses</option>
-          </select>
-        </label>
-        <label>Category
-          <select id="filter-category"><option value="">All</option></select>
-        </label>
-      </div>
-    </div>
-    <div id="transaction-table-container" class="table-wrap"></div>
-  </section>
+      <section aria-label="Add transaction">
+        <h2 class="section-title">Add transaction</h2>
+        <form id="transaction-form" class="form-stack" autocomplete="off">
+          <label>Type
+            <select name="kind" id="tx-kind">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="planned">Planned expense</option>
+            </select>
+          </label>
+          <label>Description
+            <input name="description" id="tx-description" required maxlength="200" />
+          </label>
+          <label>Amount (IDR)
+            <input name="amount" id="tx-amount" type="number" inputmode="numeric" min="1" step="1" required />
+          </label>
+          <label>Date
+            <input name="date" id="tx-date" type="date" required />
+          </label>
+          <label>Category
+            <select name="category_id" id="tx-category"><option value="">—</option></select>
+          </label>
+          <label>Notes
+            <input name="notes" id="tx-notes" maxlength="200" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="reset" class="btn">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </aside>
 
-  <section aria-label="Data portability">
-    <h2 class="section-title">Data</h2>
-    <div class="data-actions">
-      <button id="export-csv" class="btn" type="button">Export CSV</button>
-      <button id="export-json" class="btn" type="button">Backup JSON</button>
-    </div>
-  </section>
+    <section class="col-right" aria-label="Transactions">
+      <div class="table-header">
+        <h2 class="section-title">Transactions</h2>
+        <div class="filters">
+          <label>Filter
+            <select id="filter-kind">
+              <option value="all">All</option>
+              <option value="income">Income</option>
+              <option value="expense">Completed expenses</option>
+              <option value="planned">Planned expenses</option>
+            </select>
+          </label>
+          <label>Category
+            <select id="filter-category"><option value="">All</option></select>
+          </label>
+        </div>
+      </div>
+      <div id="transaction-table-container" class="table-wrap"></div>
+      <div class="data-actions">
+        <button id="export-csv" class="btn" type="button">Export CSV</button>
+        <button id="export-json" class="btn" type="button">Backup JSON</button>
+      </div>
+    </section>
+  </div>
 </main>
 
 <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
 <dialog id="confirm-dialog" class="dialog">
   <form method="dialog">
     <h3 id="dialog-title">Confirm</h3>
@@ -99,6 +105,7 @@
     </div>
   </form>
 </dialog>
+
 <dialog id="category-dialog" class="dialog">
   <form method="dialog" id="category-form">
     <h3 id="category-dialog-title">Category</h3>
@@ -116,12 +123,40 @@
     </label>
     <div class="dialog-actions">
       <button id="cat-archive" type="button" class="btn btn-danger" hidden>Archive</button>
-      <span style="flex:1"></span>
+      <span class="spacer"></span>
       <button value="cancel" class="btn">Cancel</button>
       <button value="save" class="btn btn-primary">Save</button>
     </div>
   </form>
 </dialog>
+
+<dialog id="tx-dialog" class="dialog">
+  <form method="dialog" id="tx-edit-form">
+    <h3 id="tx-dialog-title">Edit transaction</h3>
+    <label>Description
+      <input name="description" id="edit-description" required maxlength="200" autocomplete="off" />
+    </label>
+    <label>Amount (IDR)
+      <input name="amount" id="edit-amount" type="number" inputmode="numeric" min="1" step="1" required />
+    </label>
+    <label><span id="edit-date-label-text">Date</span>
+      <input name="date" id="edit-date" type="date" required />
+    </label>
+    <label>Category
+      <select name="category_id" id="edit-category"><option value="">—</option></select>
+    </label>
+    <label>Notes
+      <input name="notes" id="edit-notes" maxlength="200" />
+    </label>
+    <div class="dialog-actions">
+      <button id="edit-delete" type="button" class="btn btn-danger">Delete</button>
+      <span class="spacer"></span>
+      <button value="cancel" class="btn">Cancel</button>
+      <button value="save" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

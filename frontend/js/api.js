@@ -1,16 +1,25 @@
-const PORT = location.port;
-const HOST = location.hostname;
+import { authHeader, getToken, clearToken } from './auth.js';
 
 const API_BASE =
-  (HOST === 'localhost' || HOST === '127.0.0.1')
+  (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? 'http://localhost:8080/api'
     : 'https://your-backend-host/api';
 
 async function request(path, opts = {}) {
-  const res = await fetch(API_BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
+  const headers = {
+    'Content-Type': 'application/json',
+    ...authHeader(),
+    ...(opts.headers || {}),
+  };
+
+  const res = await fetch(API_BASE + path, { ...opts, headers });
+
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window.onUnauthorized === 'function') window.onUnauthorized();
+    throw Object.assign(new Error('Session expired, please log in'), { status: 401 });
+  }
+
   if (res.status === 204) return null;
   let body = null;
   try { body = await res.json(); } catch { /* ignore */ }
@@ -26,7 +35,15 @@ async function request(path, opts = {}) {
 }
 
 export const api = {
+  // auth
+  login: (password) => request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+    headers: {}, // no token yet
+  }),
   health: () => request('/health'),
+
+  // rest unchanged
   listTransactions: (month) => request('/transactions' + (month ? `?month=${month}` : '')),
   createTransaction: (t) => request('/transactions', { method: 'POST', body: JSON.stringify(t) }),
   updateTransaction: (id, t) => request(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(t) }),
@@ -39,3 +56,5 @@ export const api = {
   getSettings: () => request('/settings'),
   putSettings: (kv) => request('/settings', { method: 'PUT', body: JSON.stringify(kv) }),
 };
+
+export { getToken };
