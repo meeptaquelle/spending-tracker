@@ -1,0 +1,14 @@
+# secrets — never commit
+.env
+*.env
+service-account.json
+credentials*.json
+
+# go
+backend/bin/
+backend/tmp/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
