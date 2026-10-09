@@ -99,7 +99,29 @@
     </div>
   </form>
 </dialog>
-
+<dialog id="category-dialog" class="dialog">
+  <form method="dialog" id="category-form">
+    <h3 id="category-dialog-title">Category</h3>
+    <label>Name
+      <input name="name" id="cat-name" required maxlength="60" autocomplete="off" />
+    </label>
+    <label>Icon
+      <select name="icon" id="cat-icon"></select>
+    </label>
+    <label>Monthly budget (IDR, blank for none)
+      <input name="monthly_budget" id="cat-monthly" type="number" inputmode="numeric" min="1" step="1" />
+    </label>
+    <label>Daily budget (IDR, blank for none)
+      <input name="daily_budget" id="cat-daily" type="number" inputmode="numeric" min="1" step="1" />
+    </label>
+    <div class="dialog-actions">
+      <button id="cat-archive" type="button" class="btn btn-danger" hidden>Archive</button>
+      <span style="flex:1"></span>
+      <button value="cancel" class="btn">Cancel</button>
+      <button value="save" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</dialog>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/meeptaquelle/spending-tracker/backend/config"
 	"github.com/meeptaquelle/spending-tracker/backend/handlers"
 	"github.com/meeptaquelle/spending-tracker/backend/services"
@@ -17,9 +18,13 @@ import (
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not loaded: %v", err)
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
+
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

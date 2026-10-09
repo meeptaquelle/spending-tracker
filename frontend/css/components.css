@@ -106,3 +106,10 @@ table.tx-table .status-expense { color: var(--danger); }
 .dialog { border: 0; border-radius: var(--radius); padding: 1.1rem 1.2rem; max-width: 360px; width: 90vw; }
 .dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
 .dialog-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+
+#category-dialog form { display: flex; flex-direction: column; gap: 0.6rem; min-width: 280px; }
+#category-dialog h3 { margin-bottom: 0.4rem; }
+#category-dialog .dialog-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+#category-dialog input[type="number"] { -moz-appearance: textfield; }
+#category-dialog input[type="number"]::-webkit-outer-spin-button,
+#category-dialog input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }

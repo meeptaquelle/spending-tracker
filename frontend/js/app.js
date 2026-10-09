@@ -49,16 +49,17 @@ async function refreshAll() {
 }
 
 function wireMonthNav() {
-  document.getElementById('prev-month').addEventListener('click', () => {
-    setState({ selectedMonth: shiftMonth(state.selectedMonth, -1) });
+  const go = (delta) => {
+    setState({
+      selectedMonth: shiftMonth(state.selectedMonth, delta),
+      filters: { ...state.filters, categoryId: '' },
+    });
     refreshAll();
-  });
-  document.getElementById('next-month').addEventListener('click', () => {
-    setState({ selectedMonth: shiftMonth(state.selectedMonth, 1) });
-    refreshAll();
-  });
+  };
+  document.getElementById('prev-month').addEventListener('click', () => go(-1));
+  document.getElementById('next-month').addEventListener('click', () => go(1));
   document.getElementById('today-btn').addEventListener('click', () => {
-    setState({ selectedMonth: currentMonth() });
+    setState({ selectedMonth: currentMonth(), filters: { ...state.filters, categoryId: '' } });
     refreshAll();
   });
 }
@@ -68,10 +69,10 @@ function wireFilters() {
     setState({ filters: { ...state.filters, kind: e.target.value } });
   });
   document.getElementById('filter-category').addEventListener('change', (e) => {
-    setState({ filters: { ...state.filters, categoryId: e.target.value } });
+    const value = e.target.value || '';
+    setState({ filters: { ...state.filters, categoryId: value } });
   });
 }
-
 function wireExports() {
   document.getElementById('export-csv').addEventListener('click', () => {
     const rows = [['date', 'description', 'type', 'status', 'category', 'amount', 'notes']];

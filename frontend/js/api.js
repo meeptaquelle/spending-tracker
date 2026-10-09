@@ -1,5 +1,8 @@
+const PORT = location.port;
+const HOST = location.hostname;
+
 const API_BASE =
-  (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  (HOST === 'localhost' || HOST === '127.0.0.1')
     ? 'http://localhost:8080/api'
     : 'https://your-backend-host/api';
 
