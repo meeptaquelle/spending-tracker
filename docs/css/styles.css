@@ -1,0 +1,66 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  /* Dark theme — charcoal, not pitch black */
+  --bg:              #12161c;
+  --surface:         #1a1f27;
+  --surface-2:       #222831;
+  --surface-3:       #2a313a;
+  --border:          #2a313a;
+  --border-strong:   #3a424d;
+
+  --text:            #e6e9ef;
+  --text-muted:      #8b95a5;
+  --text-dim:        #5d6775;
+
+  --primary:         #4f8cff;
+  --primary-hover:   #6ba1ff;
+  --primary-bg:      #1c2b47;
+
+  --success:         #34d399;
+  --success-bg:      #16281f;
+
+  --danger:          #f87171;
+  --danger-hover:    #fca5a5;
+  --danger-bg:       #2a1818;
+  --danger-border:   #4a2323;
+
+  --warning:         #fbbf24;
+  --warning-bg:      #2b2415;
+
+  --radius:          8px;
+  --radius-sm:       6px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 { margin: 0 0 0.5rem; font-weight: 600; line-height: 1.25; color: var(--text); }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+a { color: var(--primary); }
+
+::selection { background: var(--primary-bg); color: var(--text); }
+
+/* Native dark form controls */
+input[type="date"] { color-scheme: dark; }
+input, select, textarea { color-scheme: dark; }
+
+/* Scrollbars (WebKit) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 5px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
