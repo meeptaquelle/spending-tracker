@@ -10,6 +10,10 @@ export function renderTransactionTable() {
 
   const filtered = state.transactions
     .filter(t => {
+      const d = t.status === 'planned' ? t.planned_date : t.date;
+      return d && d.slice(0, 7) === state.selectedMonth;
+    })
+    .filter(t => {
       if (state.filters.kind === 'income') return t.type === 'income';
       if (state.filters.kind === 'expense') return t.type === 'expense' && t.status === 'completed';
       if (state.filters.kind === 'planned') return t.type === 'expense' && t.status === 'planned';

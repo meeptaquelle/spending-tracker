@@ -91,7 +91,7 @@ async function refreshAll() {
   setLoading(wrap, 'Loading transactions…');
   try {
     const [txs, cats] = await Promise.all([
-      api.listTransactions(state.selectedMonth),
+      api.listTransactions(),
       api.listCategories(false),
     ]);
     setState({ transactions: txs || [], categories: cats || [] });
